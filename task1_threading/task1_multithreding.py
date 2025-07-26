@@ -42,8 +42,11 @@ def chanky(data_list, number_of_chunks):
 
 # ---------------Робота програми і інтерфейс-------------------------------------
 def main():
-    FILES_DIR = "./"
+    
+    FILES_DIR = Path(__file__).parent / "../files"
     available_files = avaliable_files(FILES_DIR)
+    print(f"Шукаємо в каталозі: {FILES_DIR.resolve()}")
+
 
     if not available_files:
         print(f"{Fore.RED}Файли не знайдено.{Style.RESET_ALL}")
