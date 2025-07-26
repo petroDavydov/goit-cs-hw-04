@@ -1,5 +1,6 @@
 import threading
 from pathlib import Path
+import time
 from colorama import Fore, Style, init
 init(autoreset=True)
 
@@ -22,13 +23,18 @@ def search_keywords(files_subset, keywords, result_list, result_lock):
     results_local = []
 
     for file in files_subset:
-        with file.open("r", encoding="utf-8", errors="ignore") as file:
-            content = file.read().lower()  # все робимо однаковим у нижньому регістрі
-            for keyword, original_keyword in zip(keywords_normal, keywords):
-                count = content.count(keyword)
-                if count > 0:
-                    # файл, слово , рахунок
-                    results_local.append((file.name, original_keyword, count))
+        try:
+            with file.open("r", encoding="utf-8", errors="ignore") as file:
+                content = file.read().lower()  # все робимо однаковим у нижньому регістрі
+                for keyword, original_keyword in zip(keywords_normal, keywords):
+                    count = content.count(keyword)
+                    if count > 0:
+                        # файл, слово , рахунок
+                        results_local.append(
+                            (file.name, original_keyword, count))
+        except Exception as e:
+            print(f"{Fore.RED}Помилка читання {file.name}: {e}{Style.RESET_ALL}")
+            continue
 
     with result_lock:  # контроль даних
         result_list.extend(results_local)
@@ -42,11 +48,11 @@ def chanky(data_list, number_of_chunks):
 
 # ---------------Робота програми і інтерфейс-------------------------------------
 def main():
-    
+    start_time = time.time()
+
     FILES_DIR = Path(__file__).parent / "../files"
     available_files = avaliable_files(FILES_DIR)
     print(f"Шукаємо в каталозі: {FILES_DIR.resolve()}")
-
 
     if not available_files:
         print(f"{Fore.RED}Файли не знайдено.{Style.RESET_ALL}")
@@ -72,7 +78,7 @@ def main():
             else:
                 print(f"{Fore.RED}Номера не існує.{Style.RESET_ALL}")
         else:
-            print(f"{Fore.LIGHTCYAN_EX}Введіть число або 'exit'.{Style.RESET_ALL}")
+            print(f"{Fore.LIGHTCYAN_EX}Введіть число чи 'exit'.{Style.RESET_ALL}")
 
     keywords_input = input(
         f"{Fore.LIGHTRED_EX}Введіть слова для пошуку через кому:{Style.RESET_ALL}").strip()
@@ -111,12 +117,23 @@ def main():
     for t in threads:
         t.join()
 
+    keyword_files = {}
+    for file_name, keyword, count in results:
+        keyword_files.setdefault(keyword, []).append(file_name)
+
+    end_time = time.time()
+    print(f"{Fore.YELLOW}Час виконання: {end_time - start_time:.2f} сек.{Style.RESET_ALL}")
+
     print(f"{Fore.MAGENTA}Результати пошуку:{Style.RESET_ALL}")
     if results:
         for file_name, keyword, count in results:
             print(f"{Fore.CYAN}{file_name} --> знайдено слово{Fore.LIGHTGREEN_EX}'{keyword}' -{Fore.CYAN} {count} раз(ів){Style.RESET_ALL}")
     else:
         print(f"{Fore.RED}У файлах слів знайдено не було.{Style.RESET_ALL}")
+
+    print(f"\n{Fore.LIGHTYELLOW_EX}Словник результатів:{Style.RESET_ALL}")
+    for keyword, file_list in keyword_files.items():
+        print(f"{Fore.LIGHTCYAN_EX}'{keyword}':{Style.RESET_ALL} {file_list}")
 
 
 if __name__ == "__main__":
